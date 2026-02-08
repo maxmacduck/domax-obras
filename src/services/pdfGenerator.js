@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 /**
  * Gera relatório PDF profissional de pagamentos de mão de obra
@@ -75,7 +75,7 @@ const addWorkersTable = (doc, custos) => {
         formatCurrency(custo.valor)
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: 50,
         head: [['Data', 'Descrição', 'Doc.', 'Valor']],
         body: tableData,
