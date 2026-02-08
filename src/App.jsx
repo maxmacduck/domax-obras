@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
+import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw, Settings } from 'lucide-react';
 import * as firestoreService from './services/firestore';
 import * as storageService from './services/storage';
 import { generateWorkerPaymentReport } from './services/pdfGenerator';
@@ -13,6 +13,8 @@ const DashboardObra = () => {
   const [editingCusto, setEditingCusto] = useState(null);
   const [editingEtapa, setEditingEtapa] = useState(null);
   const [editandoConfig, setEditandoConfig] = useState(false);
+  const [editandoOrcamento, setEditandoOrcamento] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Estados de configuração do projeto
   const [nomeProjeto, setNomeProjeto] = useState('');
@@ -398,6 +400,53 @@ const DashboardObra = () => {
     }
   };
 
+  // Função para salvar apenas o orçamento
+  const salvarOrcamento = async () => {
+    const novoOrcamento = parseFloat(tempOrcamento);
+    if (isNaN(novoOrcamento) || novoOrcamento <= 0) {
+      alert('Digite um orçamento válido!');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await firestoreService.updateProjeto('projeto-principal', {
+        orcamentoTotal: novoOrcamento
+      });
+
+      setOrcamentoTotal(novoOrcamento);
+      setEditandoOrcamento(false);
+    } catch (error) {
+      console.error('Erro ao salvar orçamento:', error);
+      alert('Erro ao salvar orçamento. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Função para salvar apenas o nome do projeto
+  const salvarNomeProjeto = async () => {
+    if (!tempNomeProjeto.trim()) {
+      alert('O nome do projeto não pode estar vazio!');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await firestoreService.updateProjeto('projeto-principal', {
+        nome: tempNomeProjeto
+      });
+
+      setNomeProjeto(tempNomeProjeto);
+      setShowConfigModal(false);
+    } catch (error) {
+      console.error('Erro ao salvar nome do projeto:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Funções de etapas
   const abrirModalAdicionarEtapa = () => {
     setEditingEtapa(null);
@@ -647,54 +696,20 @@ const DashboardObra = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900">DoMAX Obras</h1>
-              {editandoConfig ? (
-                <div className="mt-2 flex items-center gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={tempNomeProjeto}
-                      onChange={(e) => setTempNomeProjeto(e.target.value)}
-                      className="w-full px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Nome do projeto"
-                    />
-                  </div>
-                  <div className="w-48">
-                    <input
-                      type="number"
-                      value={tempOrcamento}
-                      onChange={(e) => setTempOrcamento(e.target.value)}
-                      className="w-full px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Orçamento"
-                    />
-                  </div>
-                  <button
-                    onClick={salvarConfiguracoes}
-                    className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    <CheckCircle size={18} />
-                  </button>
-                  <button
-                    onClick={() => setEditandoConfig(false)}
-                    className="px-4 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-1 flex items-center gap-2">
-                  <p className="text-gray-600">{nomeProjeto}</p>
-                  <button
-                    onClick={abrirEdicaoConfig}
-                    className="text-gray-400 hover:text-blue-600"
-                    title="Editar projeto"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                </div>
-              )}
+              <p className="text-gray-600 mt-1">{nomeProjeto}</p>
               <p className="text-sm text-green-600 mt-1">✓ Dados sincronizados automaticamente</p>
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setTempNomeProjeto(nomeProjeto);
+                  setShowConfigModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              >
+                <Settings size={18} />
+                Configurações
+              </button>
               <button
                 onClick={carregarDados}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
@@ -722,15 +737,54 @@ const DashboardObra = () => {
 
         {/* Cards de Resumo */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-100 rounded-lg">
                 <DollarSign className="text-blue-600" size={24} />
               </div>
-              <span className="text-sm text-gray-500">Orçamento</span>
+              <button
+                onClick={() => {
+                  setTempOrcamento(orcamentoTotal.toString());
+                  setEditandoOrcamento(true);
+                }}
+                className="text-gray-400 hover:text-blue-600 transition"
+                title="Editar orçamento"
+              >
+                <Edit2 size={18} />
+              </button>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(orcamentoTotal)}</h3>
-            <p className="text-sm text-gray-600 mt-1">Total previsto</p>
+
+            {editandoOrcamento ? (
+              <div className="space-y-2">
+                <input
+                  type="number"
+                  value={tempOrcamento}
+                  onChange={(e) => setTempOrcamento(e.target.value)}
+                  className="w-full px-3 py-2 border border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg font-bold"
+                  placeholder="Orçamento total"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={salvarOrcamento}
+                    className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"
+                  >
+                    ✓ Salvar
+                  </button>
+                  <button
+                    onClick={() => setEditandoOrcamento(false)}
+                    className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm font-medium"
+                  >
+                    ✗ Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(orcamentoTotal)}</h3>
+                <p className="text-sm text-gray-600 mt-1">Total previsto</p>
+              </>
+            )}
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -1561,6 +1615,53 @@ const DashboardObra = () => {
               >
                 Fechar
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Configurações do Projeto */}
+        {showConfigModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">Configurações do Projeto</h3>
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome do Projeto
+                  </label>
+                  <input
+                    type="text"
+                    value={tempNomeProjeto}
+                    onChange={(e) => setTempNomeProjeto(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome do projeto"
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowConfigModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={salvarNomeProjeto}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
