@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
 import * as firestoreService from './services/firestore';
 import * as storageService from './services/storage';
+import { generateWorkerPaymentReport } from './services/pdfGenerator';
 
 const DashboardObra = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -282,68 +283,6 @@ const DashboardObra = () => {
     }
   };
 
-  const gerarRelatorio = () => {
-    const custosObra = custos.filter(c => ['Material', 'Mão de obra', 'Equipamento'].includes(c.categoria));
-    const custosManutencao = custos.filter(c => ['Energia', 'Condomínio', 'IPTU'].includes(c.categoria));
-
-    const totalMaterial = custos.filter(c => c.categoria === 'Material').reduce((sum, c) => sum + c.valor, 0);
-    const totalMaoObra = custos.filter(c => c.categoria === 'Mão de obra').reduce((sum, c) => sum + c.valor, 0);
-    const totalEquipamento = custos.filter(c => c.categoria === 'Equipamento').reduce((sum, c) => sum + c.valor, 0);
-    const totalManutencao = custosManutencao.reduce((sum, c) => sum + c.valor, 0);
-    const totalGeral = custos.reduce((sum, c) => sum + c.valor, 0);
-
-    const documentosFaltando = custos.filter(c => !c.temDocumento);
-
-    const relatorio = `
-═══════════════════════════════════════════════════════════
-         RELATÓRIO DE CUSTOS DA OBRA - ${new Date().toLocaleDateString('pt-BR')}
-═══════════════════════════════════════════════════════════
-
-📊 CUSTOS DE OBRA
-──────────────────────────────────────────────────────────
-Material:              ${formatCurrency(totalMaterial)}
-Mão de obra:           ${formatCurrency(totalMaoObra)}
-Equipamento:           ${formatCurrency(totalEquipamento)}
-──────────────────────────────────────────────────────────
-Subtotal Obra:         ${formatCurrency(totalMaterial + totalMaoObra + totalEquipamento)}
-
-💰 CUSTOS DE MANUTENÇÃO
-──────────────────────────────────────────────────────────
-${custosManutencao.map(c => `${c.categoria.padEnd(20)} ${formatCurrency(c.valor)}`).join('\n')}
-──────────────────────────────────────────────────────────
-Subtotal Manutenção:   ${formatCurrency(totalManutencao)}
-
-═══════════════════════════════════════════════════════════
-TOTAL GERAL:           ${formatCurrency(totalGeral)}
-═══════════════════════════════════════════════════════════
-
-📄 DOCUMENTAÇÃO
-──────────────────────────────────────────────────────────
-Total de custos:       ${custos.length}
-Documentos anexados:   ${custos.filter(c => c.temDocumento).length}
-Documentos faltando:   ${documentosFaltando.length}
-
-${documentosFaltando.length > 0 ? `
-⚠️  DOCUMENTOS PENDENTES:
-${documentosFaltando.map(c => `   • ${c.descricao} - ${formatCurrency(c.valor)} (${c.categoria})`).join('\n')}
-` : '✅ Toda documentação está completa!'}
-
-═══════════════════════════════════════════════════════════
-Gerado em: ${new Date().toLocaleString('pt-BR')}
-═══════════════════════════════════════════════════════════
-    `.trim();
-
-    // Criar e baixar arquivo
-    const blob = new Blob([relatorio], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Relatorio_Obra_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   const atualizarProgressoEtapa = async (id, novoProgresso) => {
     try {
@@ -421,6 +360,41 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       alert('Erro ao salvar. Tente novamente.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Função para gerar relatório PDF
+  const gerarRelatorio = () => {
+    try {
+      // Filtrar apenas custos de mão de obra com status "pago"
+      const custosMaoDeObra = custos.filter(
+        c => c.categoria === 'Mão de obra' && c.status === 'pago'
+      );
+
+      if (custosMaoDeObra.length === 0) {
+        alert('Nenhum pagamento de mão de obra encontrado.\n\nPara gerar o relatório, adicione custos da categoria "Mão de obra" com status "Pago".');
+        return;
+      }
+
+      // Filtrar documentos relacionados aos custos de mão de obra
+      const docsRelacionados = documentos.filter(doc =>
+        custosMaoDeObra.some(custo =>
+          custo.temDocumento && custo.documento?.nome === doc.nome
+        )
+      );
+
+      // Gerar PDF profissional
+      generateWorkerPaymentReport(
+        custosMaoDeObra,
+        docsRelacionados,
+        { nome: nomeProjeto, orcamentoTotal }
+      );
+
+      // Feedback de sucesso
+      alert(`✅ Relatório PDF gerado com sucesso!\n\n📊 ${custosMaoDeObra.length} pagamento(s) de mão de obra\n📎 ${docsRelacionados.length} documento(s) anexado(s)`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('❌ Erro ao gerar relatório. Tente novamente.\n\nDetalhes: ' + error.message);
     }
   };
 
