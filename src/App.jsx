@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
+import * as firestoreService from './services/firestore';
+import * as storageService from './services/storage';
 
 const DashboardObra = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -10,12 +12,12 @@ const DashboardObra = () => {
   const [editingCusto, setEditingCusto] = useState(null);
   const [editingEtapa, setEditingEtapa] = useState(null);
   const [editandoConfig, setEditandoConfig] = useState(false);
-  
+
   // Estados de configuração do projeto
   const [nomeProjeto, setNomeProjeto] = useState('');
   const [tempNomeProjeto, setTempNomeProjeto] = useState('');
   const [tempOrcamento, setTempOrcamento] = useState('');
-  
+
   // Estados do formulário de custo
   const [formData, setFormData] = useState({
     categoria: 'Material',
@@ -72,8 +74,7 @@ const DashboardObra = () => {
       { id: 4, nome: 'Alvenaria', progresso: 30, inicio: '2024-02-10', fim: '2024-02-25', status: 'em_andamento' },
       { id: 5, nome: 'Revestimento', progresso: 0, inicio: '2024-02-20', fim: '2024-03-05', status: 'pendente' },
       { id: 6, nome: 'Pintura', progresso: 0, inicio: '2024-03-01', fim: '2024-03-10', status: 'pendente' }
-    ],
-    orcamentoTotal: 50000
+    ]
   };
 
   // Estados para dados
@@ -90,115 +91,99 @@ const DashboardObra = () => {
   const carregarDados = async () => {
     try {
       setLoading(true);
-      
-      // Carregar configurações do projeto
-      const resultNome = await window.storage.get('obra-nome-projeto');
-      const resultOrcamento = await window.storage.get('obra-orcamento');
-      
-      if (resultNome && resultNome.value) {
-        setNomeProjeto(JSON.parse(resultNome.value));
+
+      // Carregar dados do Firebase Firestore
+      const [projetoData, custosData, etapasData, documentosData] = await Promise.all([
+        firestoreService.getProjeto(),
+        firestoreService.getCustos(),
+        firestoreService.getEtapas(),
+        firestoreService.getDocumentos()
+      ]);
+
+      // Atualizar estados com dados do Firebase
+      if (projetoData) {
+        setNomeProjeto(projetoData.nome || dadosIniciais.nomeProjeto);
+        setOrcamentoTotal(projetoData.orcamentoTotal || dadosIniciais.orcamentoTotal);
       } else {
         setNomeProjeto(dadosIniciais.nomeProjeto);
-        await window.storage.set('obra-nome-projeto', JSON.stringify(dadosIniciais.nomeProjeto));
-      }
-
-      if (resultOrcamento && resultOrcamento.value) {
-        setOrcamentoTotal(JSON.parse(resultOrcamento.value));
-      } else {
         setOrcamentoTotal(dadosIniciais.orcamentoTotal);
-        await window.storage.set('obra-orcamento', JSON.stringify(dadosIniciais.orcamentoTotal));
       }
-      
-      // Tentar carregar dados salvos
-      const resultCustos = await window.storage.get('obra-custos');
-      const resultDocs = await window.storage.get('obra-documentos');
-      const resultEtapas = await window.storage.get('obra-etapas');
 
-      // Se não existir dados, usar dados iniciais
-      if (resultCustos && resultCustos.value) {
-        setCustos(JSON.parse(resultCustos.value));
-      } else {
+      // Se não houver dados, usar dados iniciais e salvá-los no Firebase
+      if (custosData.length === 0) {
+        // Salvar dados iniciais no Firebase
+        for (const custo of dadosIniciais.custos) {
+          await firestoreService.addCusto(custo);
+        }
         setCustos(dadosIniciais.custos);
-        await salvarCustos(dadosIniciais.custos);
+      } else {
+        setCustos(custosData);
       }
 
-      if (resultDocs && resultDocs.value) {
-        setDocumentos(JSON.parse(resultDocs.value));
-      } else {
-        setDocumentos(dadosIniciais.documentos);
-        await salvarDocumentos(dadosIniciais.documentos);
-      }
-
-      if (resultEtapas && resultEtapas.value) {
-        setEtapas(JSON.parse(resultEtapas.value));
-      } else {
+      if (etapasData.length === 0) {
+        for (const etapa of dadosIniciais.etapas) {
+          await firestoreService.addEtapa(etapa);
+        }
         setEtapas(dadosIniciais.etapas);
-        await salvarEtapas(dadosIniciais.etapas);
+      } else {
+        setEtapas(etapasData);
+      }
+
+      if (documentosData.length === 0) {
+        for (const doc of dadosIniciais.documentos) {
+          await firestoreService.addDocumento(doc);
+        }
+        setDocumentos(dadosIniciais.documentos);
+      } else {
+        setDocumentos(documentosData);
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Erro ao carregar dados do Firebase:', error);
+
       // Em caso de erro, usar dados iniciais
       setNomeProjeto(dadosIniciais.nomeProjeto);
       setOrcamentoTotal(dadosIniciais.orcamentoTotal);
       setCustos(dadosIniciais.custos);
       setDocumentos(dadosIniciais.documentos);
       setEtapas(dadosIniciais.etapas);
+      alert('Erro ao carregar dados do Firebase. Usando dados padrão.');
     } finally {
       setLoading(false);
     }
   };
 
-  const salvarCustos = async (novosCustos) => {
-    try {
-      setSaving(true);
-      await window.storage.set('obra-custos', JSON.stringify(novosCustos));
-    } catch (error) {
-      console.error('Erro ao salvar custos:', error);
-      alert('Erro ao salvar dados. Tente novamente.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const salvarDocumentos = async (novosDocs) => {
-    try {
-      setSaving(true);
-      await window.storage.set('obra-documentos', JSON.stringify(novosDocs));
-    } catch (error) {
-      console.error('Erro ao salvar documentos:', error);
-      alert('Erro ao salvar dados. Tente novamente.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const salvarEtapas = async (novasEtapas) => {
-    try {
-      setSaving(true);
-      await window.storage.set('obra-etapas', JSON.stringify(novasEtapas));
-    } catch (error) {
-      console.error('Erro ao salvar etapas:', error);
-      alert('Erro ao salvar dados. Tente novamente.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Funções para atualizar dados
   const atualizarStatusCusto = async (id, novoStatus) => {
-    const novosCustos = custos.map(c => 
-      c.id === id ? { ...c, status: novoStatus } : c
-    );
-    setCustos(novosCustos);
-    await salvarCustos(novosCustos);
+    try {
+      setSaving(true);
+      await firestoreService.updateCusto(id, { status: novoStatus });
+      const custosAtualizados = custos.map(c =>
+        c.id === id ? { ...c, status: novoStatus } : c
+      );
+      setCustos(custosAtualizados);
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      alert('Erro ao atualizar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const removerCusto = async (id) => {
     if (confirm('Tem certeza que deseja remover este custo?')) {
-      const novosCustos = custos.filter(c => c.id !== id);
-      setCustos(novosCustos);
-      await salvarCustos(novosCustos);
+      try {
+        setSaving(true);
+        await firestoreService.deleteCusto(id);
+        const novosCustos = custos.filter(c => c.id !== id);
+        setCustos(novosCustos);
+      } catch (error) {
+        console.error('Erro ao remover:', error);
+        alert('Erro ao remover. Tente novamente.');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -259,43 +244,56 @@ const DashboardObra = () => {
       return;
     }
 
-    let novosCustos;
-    
-    if (editingCusto) {
-      // Editando custo existente
-      novosCustos = custos.map(c => 
-        c.id === editingCusto.id 
-          ? { ...editingCusto, ...formData, valor: parseFloat(formData.valor) }
-          : c
-      );
-    } else {
-      // Adicionando novo custo
-      const novoCusto = {
-        id: Math.max(...custos.map(c => c.id), 0) + 1,
-        ...formData,
-        valor: parseFloat(formData.valor)
-      };
-      novosCustos = [...custos, novoCusto];
-    }
+    try {
+      setSaving(true);
 
-    setCustos(novosCustos);
-    await salvarCustos(novosCustos);
-    setShowAddModal(false);
-    setEditingCusto(null);
+      const custoData = {
+        categoria: formData.categoria,
+        descricao: formData.descricao,
+        valor: parseFloat(formData.valor),
+        data: formData.data,
+        status: formData.status,
+        temDocumento: formData.temDocumento,
+        tipoDocumento: formData.tipoDocumento || '',
+        documento: formData.documento
+      };
+
+      if (editingCusto) {
+        // Editando custo existente
+        await firestoreService.updateCusto(editingCusto.id, custoData);
+        const custosAtualizados = custos.map(c =>
+          c.id === editingCusto.id ? { ...c, ...custoData } : c
+        );
+        setCustos(custosAtualizados);
+      } else {
+        // Adicionando novo custo
+        const novoId = await firestoreService.addCusto(custoData);
+        const novoCusto = { id: novoId, ...custoData };
+        setCustos([...custos, novoCusto]);
+      }
+
+      setShowAddModal(false);
+      setEditingCusto(null);
+    } catch (error) {
+      console.error('Erro ao salvar custo:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const gerarRelatorio = () => {
     const custosObra = custos.filter(c => ['Material', 'Mão de obra', 'Equipamento'].includes(c.categoria));
     const custosManutencao = custos.filter(c => ['Energia', 'Condomínio', 'IPTU'].includes(c.categoria));
-    
+
     const totalMaterial = custos.filter(c => c.categoria === 'Material').reduce((sum, c) => sum + c.valor, 0);
     const totalMaoObra = custos.filter(c => c.categoria === 'Mão de obra').reduce((sum, c) => sum + c.valor, 0);
     const totalEquipamento = custos.filter(c => c.categoria === 'Equipamento').reduce((sum, c) => sum + c.valor, 0);
     const totalManutencao = custosManutencao.reduce((sum, c) => sum + c.valor, 0);
     const totalGeral = custos.reduce((sum, c) => sum + c.valor, 0);
-    
+
     const documentosFaltando = custos.filter(c => !c.temDocumento);
-    
+
     const relatorio = `
 ═══════════════════════════════════════════════════════════
          RELATÓRIO DE CUSTOS DA OBRA - ${new Date().toLocaleDateString('pt-BR')}
@@ -348,36 +346,44 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
   };
 
   const atualizarProgressoEtapa = async (id, novoProgresso) => {
-    const novasEtapas = etapas.map(e => {
-      if (e.id === id) {
-        let novoStatus = e.status;
-        if (novoProgresso === 100) novoStatus = 'concluido';
-        else if (novoProgresso > 0) novoStatus = 'em_andamento';
-        else novoStatus = 'pendente';
-        
-        return { ...e, progresso: novoProgresso, status: novoStatus };
-      }
-      return e;
-    });
-    setEtapas(novasEtapas);
-    await salvarEtapas(novasEtapas);
+    try {
+      setSaving(true);
+      let novoStatus = 'pendente';
+      if (novoProgresso === 100) novoStatus = 'concluido';
+      else if (novoProgresso > 0) novoStatus = 'em_andamento';
+
+      await firestoreService.updateEtapa(id, { progresso: novoProgresso, status: novoStatus });
+      const novasEtapas = etapas.map(e =>
+        e.id === id ? { ...e, progresso: novoProgresso, status: novoStatus } : e
+      );
+      setEtapas(novasEtapas);
+    } catch (error) {
+      console.error('Erro ao atualizar etapa:', error);
+      alert('Erro ao atualizar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const resetarDados = async () => {
-    if (confirm('Tem certeza que deseja resetar todos os dados para o padrão inicial?')) {
-      setNomeProjeto(dadosIniciais.nomeProjeto);
-      setOrcamentoTotal(dadosIniciais.orcamentoTotal);
-      setCustos(dadosIniciais.custos);
-      setDocumentos(dadosIniciais.documentos);
-      setEtapas(dadosIniciais.etapas);
-      
-      await window.storage.set('obra-nome-projeto', JSON.stringify(dadosIniciais.nomeProjeto));
-      await window.storage.set('obra-orcamento', JSON.stringify(dadosIniciais.orcamentoTotal));
-      await salvarCustos(dadosIniciais.custos);
-      await salvarDocumentos(dadosIniciais.documentos);
-      await salvarEtapas(dadosIniciais.etapas);
-      
-      alert('Dados resetados com sucesso!');
+    if (confirm('Tem certeza que deseja resetar todos os dados para o padrão inicial? ATENÇÃO: Todos os dados serão apagados do Firebase!')) {
+      try {
+        setSaving(true);
+        // Nota: Para resetar completamente, recarregar a página forçará a criação de novos dados iniciais
+        await firestoreService.updateProjeto('projeto-principal', {
+          nome: dadosIniciais.nomeProjeto,
+          orcamentoTotal: dadosIniciais.orcamentoTotal
+        });
+
+        // Recarregar a página para forçar nova carga
+        alert('Dados resetados! A página será recarregada.');
+        window.location.reload();
+      } catch (error) {
+        console.error('Erro ao resetar:', error);
+        alert('Erro ao resetar. Tente novamente.');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -393,7 +399,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       alert('O nome do projeto não pode estar vazio!');
       return;
     }
-    
+
     const novoOrcamento = parseFloat(tempOrcamento);
     if (isNaN(novoOrcamento) || novoOrcamento <= 0) {
       alert('Digite um orçamento válido!');
@@ -402,12 +408,13 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
 
     try {
       setSaving(true);
+      await firestoreService.updateProjeto('projeto-principal', {
+        nome: tempNomeProjeto,
+        orcamentoTotal: novoOrcamento
+      });
+
       setNomeProjeto(tempNomeProjeto);
       setOrcamentoTotal(novoOrcamento);
-      
-      await window.storage.set('obra-nome-projeto', JSON.stringify(tempNomeProjeto));
-      await window.storage.set('obra-orcamento', JSON.stringify(novoOrcamento));
-      
       setEditandoConfig(false);
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
@@ -450,33 +457,44 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       return;
     }
 
-    let novasEtapas;
-    
-    if (editingEtapa) {
-      novasEtapas = etapas.map(e => 
-        e.id === editingEtapa.id 
-          ? { ...editingEtapa, ...formEtapa }
-          : e
-      );
-    } else {
-      const novaEtapa = {
-        id: Math.max(...etapas.map(e => e.id), 0) + 1,
-        ...formEtapa
-      };
-      novasEtapas = [...etapas, novaEtapa];
-    }
+    try {
+      setSaving(true);
 
-    setEtapas(novasEtapas);
-    await salvarEtapas(novasEtapas);
-    setShowAddModal(false);
-    setEditingEtapa(null);
+      if (editingEtapa) {
+        await firestoreService.updateEtapa(editingEtapa.id, formEtapa);
+        const etapasAtualizadas = etapas.map(e =>
+          e.id === editingEtapa.id ? { ...e, ...formEtapa } : e
+        );
+        setEtapas(etapasAtualizadas);
+      } else {
+        const novoId = await firestoreService.addEtapa(formEtapa);
+        const novaEtapa = { id: novoId, ...formEtapa };
+        setEtapas([...etapas, novaEtapa]);
+      }
+
+      setShowAddModal(false);
+      setEditingEtapa(null);
+    } catch (error) {
+      console.error('Erro ao salvar etapa:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const removerEtapa = async (id) => {
     if (confirm('Tem certeza que deseja remover esta etapa?')) {
-      const novasEtapas = etapas.filter(e => e.id !== id);
-      setEtapas(novasEtapas);
-      await salvarEtapas(novasEtapas);
+      try {
+        setSaving(true);
+        await firestoreService.deleteEtapa(id);
+        const novasEtapas = etapas.filter(e => e.id !== id);
+        setEtapas(novasEtapas);
+      } catch (error) {
+        console.error('Erro ao remover etapa:', error);
+        alert('Erro ao remover. Tente novamente.');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -521,19 +539,26 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       return;
     }
 
-    const novoDoc = {
-      id: Math.max(...documentos.map(d => d.id), 0) + 1,
-      tipo: formDocumento.tipo,
-      nome: formDocumento.arquivo.nome,
-      data: new Date().toISOString().split('T')[0],
-      tamanho: (formDocumento.arquivo.tamanho / 1024).toFixed(0) + ' KB',
-      arquivo: formDocumento.arquivo
-    };
+    try {
+      setSaving(true);
 
-    const novosDocs = [...documentos, novoDoc];
-    setDocumentos(novosDocs);
-    await salvarDocumentos(novosDocs);
-    setShowAddModal(false);
+      const novoDoc = {
+        tipo: formDocumento.tipo,
+        nome: formDocumento.arquivo.nome,
+        data: new Date().toISOString().split('T')[0],
+        tamanho: (formDocumento.arquivo.tamanho / 1024).toFixed(0) + ' KB',
+        arquivo: formDocumento.arquivo
+      };
+
+      const novoId = await firestoreService.addDocumento(novoDoc);
+      setDocumentos([...documentos, { id: novoId, ...novoDoc }]);
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Erro ao salvar documento:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const visualizarDocumento = (doc) => {
@@ -541,6 +566,14 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       window.open(doc.arquivo.dados, '_blank');
     } else {
       alert('Este documento não tem arquivo anexado.');
+    }
+  };
+
+  const visualizarDocumentoCusto = (custo) => {
+    if (custo.documento && custo.documento.dados) {
+      window.open(custo.documento.dados, '_blank');
+    } else {
+      alert('Este custo não tem documento anexado.');
     }
   };
 
@@ -559,9 +592,17 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
 
   const removerDocumento = async (id) => {
     if (confirm('Tem certeza que deseja remover este documento?')) {
-      const novosDocs = documentos.filter(d => d.id !== id);
-      setDocumentos(novosDocs);
-      await salvarDocumentos(novosDocs);
+      try {
+        setSaving(true);
+        await firestoreService.deleteDocumento(id);
+        const novosDocs = documentos.filter(d => d.id !== id);
+        setDocumentos(novosDocs);
+      } catch (error) {
+        console.error('Erro ao remover documento:', error);
+        alert('Erro ao remover. Tente novamente.');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -579,7 +620,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
   // Cálculos
   const custosObra = custos.filter(c => ['Material', 'Mão de obra', 'Equipamento'].includes(c.categoria));
   const custosManutencao = custos.filter(c => ['Energia', 'Condomínio', 'IPTU'].includes(c.categoria));
-  
+
   const totalGasto = custos.filter(c => c.status === 'pago').reduce((sum, c) => sum + c.valor, 0);
   const totalPendente = custos.filter(c => c.status === 'pendente').reduce((sum, c) => sum + c.valor, 0);
   const totalAprovado = custos.filter(c => c.status === 'aprovado').reduce((sum, c) => sum + c.valor, 0);
@@ -680,21 +721,21 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
               <p className="text-sm text-green-600 mt-1">✓ Dados sincronizados automaticamente</p>
             </div>
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={carregarDados}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
               >
                 <RefreshCw size={18} />
                 Recarregar
               </button>
-              <button 
+              <button
                 onClick={resetarDados}
                 className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
               >
                 <Trash2 size={18} />
                 Resetar Dados
               </button>
-              <button 
+              <button
                 onClick={gerarRelatorio}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
@@ -765,11 +806,10 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition ${activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <tab.icon size={18} />
                   {tab.label}
@@ -847,10 +887,33 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                             <h4 className="font-medium text-gray-900">{etapa.nome}</h4>
                             <p className="text-sm text-gray-600">{formatDate(etapa.inicio)} - {formatDate(etapa.fim)}</p>
                           </div>
-                          <span className="text-lg font-bold text-blue-600">{etapa.progresso}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${etapa.progresso}%` }}></div>
+                          <div className="mb-3">
+                            <div className="flex items-center gap-3 mb-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={etapa.progresso}
+                                onChange={(e) => atualizarProgressoEtapa(etapa.id, parseInt(e.target.value) || 0)}
+                                className="w-16 px-2 py-1 border border-gray-300 rounded text-center font-bold"
+                              />
+                              <span className="text-sm text-gray-600">%</span>
+                              <StatusBadge status={etapa.status} />
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <div
+                                className={`h-3 rounded-full transition-all duration-300 ${etapa.progresso === 100
+                                  ? 'bg-green-500'
+                                  : etapa.progresso > 0
+                                    ? 'bg-blue-500'
+                                    : 'bg-gray-300'
+                                  }`}
+                                style={{ width: `${etapa.progresso}%` }}
+                              >
+                                <div className="h-full w-full bg-gradient-to-r from-transparent to-white/20"></div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -872,7 +935,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                     Adicionar Custo
                   </button>
                 </div>
-                
+
                 {/* Filtros */}
                 <div className="mb-4 flex gap-2 flex-wrap">
                   {['Todos', 'Material', 'Mão de obra', 'Equipamento', 'Energia', 'Condomínio', 'IPTU'].map(cat => (
@@ -903,21 +966,25 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                         <tr key={custo.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">{formatDate(custo.data)}</td>
                           <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              ['Material', 'Mão de obra', 'Equipamento'].includes(custo.categoria)
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${['Material', 'Mão de obra', 'Equipamento'].includes(custo.categoria)
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                              }`}>
                               {custo.categoria}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">{custo.descricao}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{formatCurrency(custo.valor)}</td>
                           <td className="px-4 py-3 text-center">
-                            <select 
+                            <select
                               value={custo.status}
                               onChange={(e) => atualizarStatusCusto(custo.id, e.target.value)}
-                              className="text-xs px-2 py-1 rounded border border-gray-300 focus:border-blue-500 focus:outline-none"
+                              className={`text-xs px-3 py-1.5 rounded-full border-0 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer transition-colors ${custo.status === 'pago'
+                                ? 'bg-green-100 text-green-800'
+                                : custo.status === 'aprovado'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                                }`}
                             >
                               <option value="pendente">Pendente</option>
                               <option value="aprovado">Aprovado</option>
@@ -926,9 +993,18 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                           </td>
                           <td className="px-4 py-3 text-center">
                             {custo.temDocumento ? (
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="flex items-center justify-center gap-2">
                                 <CheckCircle size={16} className="text-green-600" />
                                 <span className="text-xs text-gray-600">{custo.tipoDocumento}</span>
+                                {custo.documento && custo.documento.dados && (
+                                  <button
+                                    onClick={() => visualizarDocumentoCusto(custo)}
+                                    className="text-blue-600 hover:text-blue-800 underline text-xs"
+                                    title="Visualizar documento"
+                                  >
+                                    Ver
+                                  </button>
+                                )}
                               </div>
                             ) : (
                               <div className="flex items-center justify-center gap-1">
@@ -938,14 +1014,14 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <button 
+                            <button
                               onClick={() => abrirModalEditar(custo)}
                               className="text-gray-600 hover:text-blue-600 mr-2"
                               title="Editar"
                             >
                               <Edit2 size={16} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => removerCusto(custo.id)}
                               className="text-gray-600 hover:text-red-600"
                               title="Excluir"
@@ -1070,10 +1146,9 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          className={`h-3 rounded-full transition-all ${
-                            etapa.status === 'concluido' ? 'bg-green-500' :
+                          className={`h-3 rounded-full transition-all ${etapa.status === 'concluido' ? 'bg-green-500' :
                             etapa.status === 'em_andamento' ? 'bg-blue-500' : 'bg-gray-400'
-                          }`}
+                            }`}
                           style={{ width: `${etapa.progresso}%` }}
                         ></div>
                       </div>
@@ -1120,13 +1195,13 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                         <span>{doc.tamanho}</span>
                       </div>
                       <div className="pt-3 border-t border-gray-200 flex gap-2">
-                        <button 
+                        <button
                           onClick={() => visualizarDocumento(doc)}
                           className="flex-1 text-sm text-blue-600 hover:bg-blue-50 py-2 rounded transition"
                         >
                           Visualizar
                         </button>
-                        <button 
+                        <button
                           onClick={() => downloadDocumento(doc)}
                           className="flex-1 text-sm text-gray-600 hover:bg-gray-100 py-2 rounded transition"
                         >

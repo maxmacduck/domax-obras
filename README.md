@@ -1,172 +1,288 @@
-# 🏗️ DoMAX Obras - Dashboard de Gerenciamento
+# 🏗️ DoMAX Obras
 
-Dashboard profissional para gerenciamento de custos e documentação de obras e reformas.
+Dashboard moderno para gestão completa de obras de construção civil com integração Firebase.
 
-## 🚀 Deploy na Vercel (Método Mais Fácil)
+![React](https://img.shields.io/badge/React-18.2.0-blue)
+![Firebase](https://img.shields.io/badge/Firebase-10.7.0-orange)
+![Vite](https://img.shields.io/badge/Vite-4.5.14-purple)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.3.2-cyan)
 
-### Opção 1: Via GitHub (Recomendado - Deploy Automático)
+---
 
-#### Passo 1: Criar Conta no GitHub
-1. Acesse [github.com](https://github.com)
-2. Clique em "Sign up"
-3. Crie sua conta (gratuita)
+## 📋 Sobre o Projeto
 
-#### Passo 2: Criar Repositório
-1. Clique no botão "+" no canto superior direito
-2. Selecione "New repository"
-3. Nome: `domax-obras` (ou o que preferir)
-4. Marque "Public"
-5. Clique em "Create repository"
+**DoMAX Obras** é uma aplicação web completa para gestão de obras de construção, permitindo controle detalhado de:
 
-#### Passo 3: Fazer Upload dos Arquivos
-**Pelo site do GitHub:**
-1. Na página do repositório criado
-2. Clique em "uploading an existing file"
-3. Arraste TODOS os arquivos do projeto
-4. Clique em "Commit changes"
+- 💰 **Custos** - Materiais, mão de obra e equipamentos
+- 📅 **Cronograma** - Etapas com barras de progresso visuais
+- 📄 **Documentos** - Notas fiscais, projetos e recibos
+- 📊 **Dashboard** - Visão geral com métricas em tempo real
 
-**OU pelo terminal (se souber usar Git):**
+---
+
+## ✨ Principais Funcionalidades
+
+### 💰 Gestão de Custos
+- Adicionar, editar e remover custos
+- Categorização por tipo (Material, Mão de obra, Equipamento, etc.)
+- Status com código de cores (Pendente, Aprovado, Pago)
+- Anexar documentos diretamente aos custos
+- Visualização rápida de documentos anexados
+
+### 📅 Cronograma Interativo
+- Criar e gerenciar etapas da obra
+- Barras de progresso visuais e animadas
+- Atualização em tempo real do status
+- Cores intuitivas (Verde=100%, Azul=em andamento, Cinza=não iniciado)
+
+### 📄 Gerenciamento de Documentos
+- Upload de PDFs, imagens e outros arquivos
+- Categorização por tipo (Projeto, NF, Recibo, etc.)
+- Visualização e download diretos
+- Integração com Firebase Storage
+
+### 📊 Dashboard em Tempo Real
+- Orçamento total vs gasto
+- Saldo restante calculado automaticamente
+- Progresso geral da obra
+- Resumo por categoria
+
+---
+
+## 🔥 Integração Firebase
+
+O projeto utiliza Firebase para armazenamento de dados na nuvem:
+
+- **Firestore Database** - Dados estruturados (custos, etapas, documentos)
+- **Firebase Storage** - Armazenamento de arquivos
+- **Real-time Sync** - Dados sempre atualizados
+- **Multi-dispositivo** - Acesse de qualquer lugar
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- Node.js 16+ 
+- npm ou yarn
+- Conta Firebase (gratuita)
+
+### Instalação
+
+1. **Clone o repositório**
 ```bash
-cd caminho/para/domax-obras-vercel
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/seu-usuario/domax-obras.git
-git push -u origin main
+git clone https://github.com/SEU_USUARIO/domax-obras.git
+cd domax-obras
 ```
 
-#### Passo 4: Deploy na Vercel
-1. Acesse [vercel.com](https://vercel.com)
-2. Clique em "Sign Up" → "Continue with GitHub"
-3. Autorize a Vercel a acessar o GitHub
-4. Clique em "Import Project"
-5. Selecione o repositório `domax-obras`
-6. Clique em "Deploy"
-7. Aguarde 2-3 minutos... Pronto! ✅
-
-**Seu dashboard estará no ar em:** `https://domax-obras.vercel.app`
-
----
-
-### Opção 2: Upload Direto (Mais Rápido, Sem GitHub)
-
-#### Passo 1: Preparar os Arquivos
-1. Baixe todos os arquivos do projeto
-2. Certifique-se que tem a pasta completa
-
-#### Passo 2: Deploy na Vercel
-1. Acesse [vercel.com](https://vercel.com)
-2. Faça login com email ou GitHub
-3. Clique em "Add New..." → "Project"
-4. Clique na aba "Deploy from a template"
-5. **OU** arraste a pasta do projeto direto na página
-
-#### Passo 3: Configurar
-1. Nome do projeto: `domax-obras`
-2. Framework Preset: **Vite**
-3. Clique em "Deploy"
-4. Aguarde... Pronto! ✅
-
----
-
-## 📱 Como Acessar
-
-### No Computador
-- Abra o link: `https://seu-projeto.vercel.app`
-- Adicione aos favoritos
-
-### No Celular
-- Abra o mesmo link no navegador
-- Menu do navegador → "Adicionar à tela inicial"
-- Agora você tem um ícone como se fosse um app!
-
----
-
-## 🔄 Como Atualizar o Dashboard
-
-### Se usou GitHub (Opção 1):
-1. Faça alterações nos arquivos localmente
-2. Commit e push para o GitHub
-3. A Vercel atualiza automaticamente! 🎉
-
-### Se fez upload direto (Opção 2):
-1. Vá em vercel.com → seu projeto
-2. Aba "Deployments"
-3. Faça novo upload dos arquivos atualizados
-
----
-
-## 💾 Onde Ficam os Dados?
-
-Os dados são salvos no **navegador** usando o storage do Claude:
-- ✅ Funcionam offline
-- ✅ Sincronizam entre dispositivos
-- ✅ Não precisa banco de dados
-- ⚠️ Ficam salvos enquanto você usar o mesmo link/sessão
-
----
-
-## 🛠️ Desenvolvimento Local (Opcional)
-
-Se quiser rodar na sua máquina para testar:
-
+2. **Instale as dependências**
 ```bash
-# Instalar dependências
 npm install
+```
 
-# Rodar em modo desenvolvimento
+3. **Configure o Firebase**
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```env
+VITE_FIREBASE_API_KEY=sua_api_key
+VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=seu_projeto_id
+VITE_FIREBASE_STORAGE_BUCKET=seu_bucket.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
+VITE_FIREBASE_APP_ID=seu_app_id
+VITE_FIREBASE_MEASUREMENT_ID=seu_measurement_id
+```
+
+4. **Inicie o servidor de desenvolvimento**
+```bash
 npm run dev
+```
 
-# Abrir no navegador
-http://localhost:5173
+Acesse: `http://localhost:5173`
+
+---
+
+## 🔧 Configuração do Firebase
+
+### 1. Criar Projeto Firebase
+
+1. Acesse [Firebase Console](https://console.firebase.google.com)
+2. Crie um novo projeto
+3. Copie as credenciais do SDK
+
+### 2. Ativar Firestore Database
+
+1. No Firebase Console, vá em **Firestore Database**
+2. Clique em **"Criar banco de dados"**
+3. Escolha **"Modo de teste"** (para desenvolvimento)
+4. Selecione a região mais próxima
+
+### 3. Configurar Regras de Segurança
+
+**Para desenvolvimento:**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+⚠️ **Para produção, configure regras com autenticação!**
+
+---
+
+## 📦 Build para Produção
+
+```bash
+npm run build
+```
+
+Os arquivos otimizados estarão em `dist/`
+
+---
+
+## 🛠️ Tecnologias
+
+- **React 18.2** - Framework UI
+- **Vite 4.5** - Build tool ultra-rápida
+- **TailwindCSS 3.3** - Estilização
+- **Firebase 10.7** - Backend as a Service
+- **Lucide React** - Ícones modernos
+
+---
+
+## 📂 Estrutura do Projeto
+
+```
+domax-obras/
+├── src/
+│   ├── App.jsx              # Componente principal
+│   ├── services/
+│   │   ├── firebase.js      # Configuração Firebase
+│   │   ├── firestore.js     # Funções CRUD Firestore
+│   │   └── storage.js       # Upload de arquivos
+│   └── index.css            # Estilos globais
+├── .env.local               # Credenciais Firebase (não versionado)
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── tailwind.config.js
 ```
 
 ---
 
-## 📋 Funcionalidades
+## 🎨 Melhorias Visuais
 
-- ✅ Controle de custos (Material, Mão de obra, Equipamento)
-- ✅ Custos de manutenção (Energia, Condomínio, IPTU)
-- ✅ Gestão de documentos com upload
-- ✅ Cronograma de etapas com progresso
-- ✅ Relatórios exportáveis
-- ✅ Responsivo (funciona em qualquer tela)
-- ✅ Persistência automática de dados
+- ✅ Barras de progresso animadas com gradientes
+- ✅ Select de status com cores dinâmicas
+- ✅ Botão "Ver" para visualizar documentos
+- ✅ Design responsivo e moderno
+- ✅ Feedback visual em todas as ações
 
 ---
 
-## 🎯 Próximos Passos
+## 📝 Estrutura de Dados (Firestore)
 
-1. Fazer o deploy seguindo uma das opções acima
-2. Configurar o nome do seu projeto
-3. Começar a lançar os custos
-4. Fazer upload dos documentos
-5. Acompanhar o progresso da obra!
+### Coleção: `projetos`
+```javascript
+{
+  nome: string,
+  orcamentoTotal: number,
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+### Coleção: `custos`
+```javascript
+{
+  projetoId: string,
+  categoria: string,
+  descricao: string,
+  valor: number,
+  data: string,
+  status: 'pendente' | 'aprovado' | 'pago',
+  temDocumento: boolean,
+  tipoDocumento: string,
+  documento: object
+}
+```
+
+### Coleção: `etapas`
+```javascript
+{
+  projetoId: string,
+  nome: string,
+  progresso: number (0-100),
+  inicio: string,
+  fim: string,
+  status: 'pendente' | 'em_andamento' | 'concluido'
+}
+```
+
+### Coleção: `documentos`
+```javascript
+{
+  projetoId: string,
+  tipo: string,
+  nome: string,
+  data: string,
+  tamanho: string,
+  arquivo: object
+}
+```
 
 ---
 
-## 🆘 Problemas Comuns
+## 🤝 Contribuindo
 
-**"Build failed":**
-- Verifique se todos os arquivos estão na pasta
-- Tente fazer deploy novamente
+Contribuições são bem-vindas! Sinta-se à vontade para:
 
-**"Dados não aparecem":**
-- Os dados são locais do navegador
-- Use sempre o mesmo link
-- Verifique se o storage está habilitado
-
-**"Não consigo fazer upload":**
-- Limite de 5MB por arquivo
-- Formatos aceitos: PDF, JPG, PNG, DOC, XLS
+1. Fazer fork do projeto
+2. Criar uma branch (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abrir um Pull Request
 
 ---
 
-## 📞 Suporte
+## 📄 Licença
 
-Dúvidas? Volte na conversa do Claude e me pergunte!
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
 ---
 
-**Desenvolvido com ❤️ usando React + Vite + Tailwind CSS**
+## 👤 Autor
+
+**Seu Nome**
+- GitHub: [@seu_usuario](https://github.com/seu_usuario)
+
+---
+
+## 🙏 Agradecimentos
+
+- Firebase pela infraestrutura cloud gratuita
+- Lucide pela biblioteca de ícones
+- Vercel pelo Vite
+
+---
+
+## 🔮 Próximas Funcionalidades
+
+- [ ] Autenticação de usuários (Firebase Auth)
+- [ ] Sincronização em tempo real
+- [ ] Modo offline com cache
+- [ ] Multi-projeto
+- [ ] Relatórios em PDF
+- [ ] Gráficos de custos
+- [ ] Notificações
+- [ ] App mobile (React Native)
+
+---
+
+**Desenvolvido com ❤️ para facilitar a gestão de obras**
