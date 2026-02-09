@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, FileText, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign, Calendar, Upload, Download, Plus, Trash2, Edit2, X, RefreshCw, Settings, Sparkles, Send, Bot, Lightbulb } from 'lucide-react';
 import * as firestoreService from './services/firestore';
 import * as storageService from './services/storage';
 import { generateWorkerPaymentReport } from './services/pdfGenerator';
+import * as geminiService from './services/gemini';
 
 const DashboardObra = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -15,6 +16,15 @@ const DashboardObra = () => {
   const [editandoConfig, setEditandoConfig] = useState(false);
   const [editandoOrcamento, setEditandoOrcamento] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
+
+  // Estados de IA
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const aiChatRef = useRef(null);
 
   // Estados de configuração do projeto
   const [nomeProjeto, setNomeProjeto] = useState('');
@@ -445,6 +455,82 @@ const DashboardObra = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ========== FUNÇÕES DE IA ==========
+
+  // Enviar mensagem para o chat de IA
+  const enviarMensagemIA = async () => {
+    if (!aiInput.trim() || aiLoading) return;
+
+    const userMessage = aiInput.trim();
+    setAiInput('');
+
+    // Adicionar mensagem do usuário
+    const newMessages = [...aiMessages, { role: 'user', content: userMessage }];
+    setAiMessages(newMessages);
+    setAiLoading(true);
+
+    try {
+      // Dados do projeto para contexto
+      const dadosProjeto = {
+        orcamentoTotal,
+        custos,
+        etapas,
+        nomeProjeto
+      };
+
+      // Chamar API do Gemini com contexto
+      const response = await geminiService.chatConstrucao(userMessage, aiMessages.slice(-4), dadosProjeto);
+
+      // Adicionar resposta da IA
+      setAiMessages([...newMessages, { role: 'assistant', content: response }]);
+    } catch (error) {
+      console.error('Erro no chat de IA:', error);
+      setAiMessages([...newMessages, {
+        role: 'assistant',
+        content: '❌ Erro ao processar sua pergunta. Verifique se a chave de API está configurada no arquivo .env.local'
+      }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Auto-scroll do chat quando novas mensagens chegam
+  useEffect(() => {
+    if (aiChatRef.current) {
+      aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight;
+    }
+  }, [aiMessages, aiLoading]);
+
+  // Analisar custos com IA
+  const analisarCustosIA = async () => {
+    if (custos.length === 0) {
+      alert('Adicione alguns custos antes de solicitar análise.');
+      return;
+    }
+
+    setAiLoading(true);
+    setShowAIAnalysis(true);
+
+    try {
+      const analise = await geminiService.analisarCustos(custos, orcamentoTotal);
+      setAiAnalysis(analise);
+    } catch (error) {
+      console.error('Erro ao analisar custos:', error);
+      setAiAnalysis({
+        analise: '❌ Erro ao analisar custos. Verifique se a chave de API está configurada.',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Limpar chat de IA
+  const limparChatIA = () => {
+    setAiMessages([]);
+    setAiInput('');
   };
 
   // Funções de etapas
@@ -1659,6 +1745,216 @@ const DashboardObra = () => {
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                   >
                     Salvar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== ASSISTENTE DE IA ========== */}
+
+        {/* Botão Flutuante de IA */}
+        <button
+          onClick={() => setShowAIChat(!showAIChat)}
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 z-40 flex items-center gap-2"
+          title="Assistente de IA"
+        >
+          <Sparkles size={24} />
+          {!showAIChat && <span className="text-sm font-medium pr-1">IA</span>}
+        </button>
+
+        {/* Modal de Chat de IA */}
+        {showAIChat && (
+          <div className="fixed bottom-24 right-6 w-96 bg-white rounded-lg shadow-2xl z-40 flex flex-col max-h-[600px]">
+            {/* Header do Chat */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot size={24} />
+                <div>
+                  <h3 className="font-bold">Assistente de Obras</h3>
+                  <p className="text-xs opacity-90">Powered by Google Gemini</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {aiMessages.length > 0 && (
+                  <button
+                    onClick={limparChatIA}
+                    className="text-white hover:bg-white/20 p-2 rounded transition"
+                    title="Limpar chat"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAIChat(false)}
+                  className="text-white hover:bg-white/20 p-2 rounded transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Botões de Ação Rápida */}
+            <div className="p-3 bg-gray-50 border-b space-y-2">
+              <button
+                onClick={analisarCustosIA}
+                disabled={aiLoading || custos.length === 0}
+                className="w-full flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                <Lightbulb size={16} />
+                Analisar Orçamento
+              </button>
+            </div>
+
+            {/* Área de Mensagens */}
+            <div ref={aiChatRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]">
+              {aiMessages.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <Bot size={48} className="mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">Olá! Como posso ajudar?</p>
+                  <p className="text-sm mt-2">Faça perguntas sobre construção,<br />materiais, custos e muito mais!</p>
+
+                  <div className="mt-6 space-y-2">
+                    <p className="text-xs font-medium text-gray-600">Exemplos:</p>
+                    <button
+                      onClick={() => {
+                        setAiInput('Quanto custa fazer uma laje de 50m²?');
+                      }}
+                      className="block w-full text-left text-xs bg-gray-100 hover:bg-gray-200 p-2 rounded transition"
+                    >
+                      💬 Quanto custa fazer uma laje de 50m²?
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAiInput('Quais materiais preciso para reformar uma cozinha?');
+                      }}
+                      className="block w-full text-left text-xs bg-gray-100 hover:bg-gray-200 p-2 rounded transition"
+                    >
+                      🔨 Quais materiais preciso para reformar uma cozinha?
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {aiMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {msg.role === 'assistant' && (
+                        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Bot size={18} className="text-white" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[75%] p-3 rounded-lg ${msg.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                          }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {aiLoading && (
+                    <div className="flex gap-2 justify-start">
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <RefreshCw size={18} className="text-white animate-spin" />
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-lg">
+                        <p className="text-sm text-gray-600">Pensando...</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Input de Mensagem */}
+            <div className="p-3 border-t bg-white rounded-b-lg">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && enviarMensagemIA()}
+                  placeholder="Digite sua pergunta..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  disabled={aiLoading}
+                />
+                <button
+                  onClick={enviarMensagemIA}
+                  disabled={!aiInput.trim() || aiLoading}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-2 rounded-lg hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Análise de IA */}
+        {showAIAnalysis && aiAnalysis && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Lightbulb size={28} />
+                    <div>
+                      <h2 className="text-2xl font-bold">Análise de Orçamento</h2>
+                      <p className="text-sm opacity-90">Powered by Google Gemini AI</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAIAnalysis(false);
+                      setAiAnalysis(null);
+                    }}
+                    className="text-white hover:bg-white/20 p-2 rounded transition"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {aiLoading ? (
+                  <div className="text-center py-12">
+                    <RefreshCw size={48} className="animate-spin mx-auto mb-4 text-purple-600" />
+                    <p className="text-gray-600">Analisando seu orçamento...</p>
+                  </div>
+                ) : (
+                  <div className="prose max-w-none">
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border-l-4 border-purple-600">
+                      <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                        {aiAnalysis.analise}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">
+                      Análise gerada em: {new Date(aiAnalysis.timestamp).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowAIAnalysis(false);
+                      setAiAnalysis(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    onClick={analisarCustosIA}
+                    disabled={aiLoading}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 font-medium disabled:opacity-50"
+                  >
+                    Nova Análise
                   </button>
                 </div>
               </div>
