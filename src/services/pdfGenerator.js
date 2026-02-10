@@ -123,56 +123,100 @@ const addTotal = (doc, custos, startY) => {
 };
 
 /**
- * Adiciona documentos anexados como novas páginas
+ * Adiciona documentos anexados aos custos como novas páginas
+ * @param {jsPDF} doc - Instância do jsPDF
+ * @param {Array} custosComDoc - Custos que possuem documento anexado (com base64)
+ * @param {number} pageHeight - Altura da página
  */
-const addDocumentAttachments = (doc, documentos, pageHeight) => {
-    if (documentos.length === 0) return;
+const addDocumentAttachments = (doc, custosComDoc, pageHeight) => {
+    if (custosComDoc.length === 0) return;
+
+    const pageWidth = doc.internal.pageSize.width;
 
     doc.addPage();
 
-    doc.setFontSize(16);
+    // Título da seção de anexos
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('ANEXOS - DOCUMENTOS COMPROBATÓRIOS', 15, 20);
+    doc.setTextColor(255, 255, 255);
+    doc.text('ANEXOS — DOCUMENTOS COMPROBATÓRIOS', pageWidth / 2, 16, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
 
     let currentY = 35;
 
-    documentos.forEach((documento, index) => {
+    custosComDoc.forEach((custo, index) => {
+        const documento = custo.documento;
+        if (!documento) return;
+
         // Verificar se precisa de nova página
-        if (currentY > pageHeight - 60) {
+        if (currentY > pageHeight - 100) {
             doc.addPage();
             currentY = 20;
         }
 
+        // Cabeçalho do anexo
+        doc.setFillColor(240, 240, 240);
+        doc.rect(15, currentY - 5, pageWidth - 30, 20, 'F');
+
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text(`${index + 1}. ${documento.tipo}: ${documento.nome}`, 15, currentY);
+        doc.setTextColor(30, 58, 138);
+        doc.text(`Anexo ${index + 1}: ${documento.nome || 'Documento'}`, 20, currentY + 4);
 
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Data: ${new Date(documento.data).toLocaleDateString('pt-BR')}`, 15, currentY + 6);
-        doc.text(`Tamanho: ${documento.tamanho || 'N/A'}`, 15, currentY + 12);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+            `Custo: ${custo.descricao} | Valor: ${formatCurrency(custo.valor)} | Tipo: ${custo.tipoDocumento || 'N/A'}`,
+            20,
+            currentY + 11
+        );
 
-        // Se o documento for uma imagem base64, adicionar ao PDF
-        if (documento.arquivo && documento.arquivo.data) {
+        currentY += 22;
+        doc.setTextColor(0, 0, 0);
+
+        // Tentar incorporar o documento se for imagem base64
+        const base64Data = documento.base64 || documento.url || (documento.dados);
+
+        if (base64Data && base64Data.startsWith('data:image')) {
             try {
-                const imgData = documento.arquivo.data;
-                doc.addImage(imgData, 'JPEG', 15, currentY + 18, 100, 70);
-                currentY += 100;
+                // Calcular dimensões da imagem mantendo proporção
+                const maxWidth = pageWidth - 40;
+                const maxHeight = pageHeight - currentY - 30;
+                const imgHeight = Math.min(maxHeight, 120);
+
+                doc.addImage(base64Data, 'JPEG', 20, currentY, maxWidth, imgHeight);
+                currentY += imgHeight + 15;
             } catch (error) {
-                console.error('Erro ao adicionar imagem:', error);
+                console.error('Erro ao adicionar imagem ao PDF:', error);
                 doc.setFontSize(9);
                 doc.setTextColor(150, 150, 150);
-                doc.text('(Visualização do documento não disponível)', 15, currentY + 18);
-                currentY += 30;
+                doc.text('(Erro ao renderizar imagem)', 20, currentY + 5);
+                doc.setTextColor(0, 0, 0);
+                currentY += 15;
             }
+        } else if (base64Data && base64Data.startsWith('data:application/pdf')) {
+            // PDF embutido — não dá para renderizar diretamente, indicar presença
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`📎 Documento PDF armazenado: ${documento.nome}`, 20, currentY + 5);
+            doc.text(`   Tamanho: ${documento.tamanho ? (documento.tamanho / 1024).toFixed(0) + ' KB' : 'N/A'}`, 20, currentY + 11);
+            doc.setTextColor(0, 0, 0);
+            currentY += 20;
         } else {
             doc.setFontSize(9);
             doc.setTextColor(150, 150, 150);
-            doc.text('(Documento armazenado no Firebase Storage)', 15, currentY + 18);
-            currentY += 30;
+            doc.text('(Documento sem visualização disponível)', 20, currentY + 5);
+            doc.setTextColor(0, 0, 0);
+            currentY += 15;
         }
 
-        doc.setTextColor(0, 0, 0);
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.line(15, currentY, pageWidth - 15, currentY);
+        currentY += 10;
     });
 };
 

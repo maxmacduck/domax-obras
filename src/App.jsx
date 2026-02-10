@@ -59,42 +59,37 @@ const DashboardObra = () => {
     arquivo: null
   });
 
-  // Dados iniciais padrão
-  const dadosIniciais = {
-    nomeProjeto: 'Reforma Residencial - Apt 102',
-    orcamentoTotal: 50000,
-    custos: [
-      { id: 1, categoria: 'Material', descricao: 'Cimento e areia', valor: 2500, data: '2024-02-01', status: 'pago', temDocumento: true, tipoDocumento: 'NF', documento: null },
-      { id: 2, categoria: 'Mão de obra', descricao: 'Pedreiro - Semana 1', valor: 1800, data: '2024-02-05', status: 'pago', temDocumento: true, tipoDocumento: 'Recibo', documento: null },
-      { id: 3, categoria: 'Material', descricao: 'Revestimento cerâmico', valor: 4200, data: '2024-02-10', status: 'pendente', temDocumento: false, tipoDocumento: '', documento: null },
-      { id: 4, categoria: 'Mão de obra', descricao: 'Eletricista', valor: 1500, data: '2024-02-12', status: 'aprovado', temDocumento: false, tipoDocumento: '', documento: null },
-      { id: 5, categoria: 'Equipamento', descricao: 'Aluguel betoneira', valor: 600, data: '2024-02-08', status: 'pago', temDocumento: true, tipoDocumento: 'NF', documento: null },
-      { id: 6, categoria: 'Energia', descricao: 'Conta de luz - Fev/24', valor: 450, data: '2024-02-15', status: 'pago', temDocumento: true, tipoDocumento: 'Conta', documento: null },
-      { id: 7, categoria: 'Condomínio', descricao: 'Condomínio - Fev/24', valor: 650, data: '2024-02-05', status: 'pago', temDocumento: true, tipoDocumento: 'Boleto', documento: null },
-      { id: 8, categoria: 'IPTU', descricao: 'IPTU - 1ª parcela 2024', valor: 380, data: '2024-02-10', status: 'pago', temDocumento: true, tipoDocumento: 'Guia', documento: null }
-    ],
-    documentos: [
-      { id: 1, tipo: 'Projeto', nome: 'Projeto Arquitetônico.pdf', data: '2024-01-15', tamanho: '2.4 MB' },
-      { id: 2, tipo: 'Contrato', nome: 'Contrato Empreiteira.pdf', data: '2024-01-20', tamanho: '856 KB' },
-      { id: 3, tipo: 'Orçamento', nome: 'Orçamento Materiais.xlsx', data: '2024-01-25', tamanho: '124 KB' },
-      { id: 4, tipo: 'Licença', nome: 'Alvará de Reforma.pdf', data: '2024-01-18', tamanho: '1.2 MB' },
-      { id: 5, tipo: 'Foto', nome: 'Estado Inicial - Cozinha.jpg', data: '2024-02-01', tamanho: '3.8 MB' }
-    ],
-    etapas: [
-      { id: 1, nome: 'Demolição', progresso: 100, inicio: '2024-02-01', fim: '2024-02-05', status: 'concluido' },
-      { id: 2, nome: 'Infraestrutura elétrica', progresso: 80, inicio: '2024-02-06', fim: '2024-02-15', status: 'em_andamento' },
-      { id: 3, nome: 'Hidráulica', progresso: 60, inicio: '2024-02-08', fim: '2024-02-18', status: 'em_andamento' },
-      { id: 4, nome: 'Alvenaria', progresso: 30, inicio: '2024-02-10', fim: '2024-02-25', status: 'em_andamento' },
-      { id: 5, nome: 'Revestimento', progresso: 0, inicio: '2024-02-20', fim: '2024-03-05', status: 'pendente' },
-      { id: 6, nome: 'Pintura', progresso: 0, inicio: '2024-03-01', fim: '2024-03-10', status: 'pendente' }
-    ]
+  // Valores padrão do projeto
+  const projetoPadrao = {
+    nomeProjeto: 'Novo Projeto',
+    orcamentoTotal: 0
   };
+
+  // Categorias padrão
+  const categoriasDefault = [
+    { grupo: 'Custos de Obra', items: ['Material', 'Mão de obra', 'Equipamento'] },
+    { grupo: 'Custos de Manutenção', items: ['Energia', 'Condomínio', 'IPTU'] }
+  ];
+  const descricoesDefault = [
+    'Cimento e areia', 'Pedreiro', 'Eletricista', 'Encanador', 'Pintor',
+    'Conta de luz', 'Conta de água', 'Condomínio mensal', 'IPTU parcela',
+    'Revestimento cerâmico', 'Tinta e pintura', 'Fiação elétrica',
+    'Material hidráulico', 'Aluguel betoneira', 'Ferramentas'
+  ];
 
   // Estados para dados
   const [custos, setCustos] = useState([]);
   const [documentos, setDocumentos] = useState([]);
   const [etapas, setEtapas] = useState([]);
-  const [orcamentoTotal, setOrcamentoTotal] = useState(50000);
+  const [orcamentoTotal, setOrcamentoTotal] = useState(0);
+  const [categorias, setCategorias] = useState(categoriasDefault);
+  const [descricoesPadrao, setDescricoesPadrao] = useState(descricoesDefault);
+  const [novaCategoria, setNovaCategoria] = useState('');
+  const [grupoNovaCategoria, setGrupoNovaCategoria] = useState('Custos de Obra');
+  const [novaDescricao, setNovaDescricao] = useState('');
+
+  // Carregar dados do storage ao iniciar
+  const [filtroCategoria, setFiltroCategoria] = useState('Todos');
 
   // Carregar dados do storage ao iniciar
   useEffect(() => {
@@ -115,52 +110,24 @@ const DashboardObra = () => {
 
       // Atualizar estados com dados do Firebase
       if (projetoData) {
-        setNomeProjeto(projetoData.nome || dadosIniciais.nomeProjeto);
-        setOrcamentoTotal(projetoData.orcamentoTotal || dadosIniciais.orcamentoTotal);
+        setNomeProjeto(projetoData.nome || projetoPadrao.nomeProjeto);
+        setOrcamentoTotal(projetoData.orcamentoTotal || projetoPadrao.orcamentoTotal);
+        if (projetoData.categorias) setCategorias(projetoData.categorias);
+        if (projetoData.descricoesPadrao) setDescricoesPadrao(projetoData.descricoesPadrao);
       } else {
-        setNomeProjeto(dadosIniciais.nomeProjeto);
-        setOrcamentoTotal(dadosIniciais.orcamentoTotal);
+        setNomeProjeto(projetoPadrao.nomeProjeto);
+        setOrcamentoTotal(projetoPadrao.orcamentoTotal);
       }
 
-      // Se não houver dados, usar dados iniciais e salvá-los no Firebase
-      if (custosData.length === 0) {
-        // Salvar dados iniciais no Firebase
-        for (const custo of dadosIniciais.custos) {
-          await firestoreService.addCusto(custo);
-        }
-        setCustos(dadosIniciais.custos);
-      } else {
-        setCustos(custosData);
-      }
-
-      if (etapasData.length === 0) {
-        for (const etapa of dadosIniciais.etapas) {
-          await firestoreService.addEtapa(etapa);
-        }
-        setEtapas(dadosIniciais.etapas);
-      } else {
-        setEtapas(etapasData);
-      }
-
-      if (documentosData.length === 0) {
-        for (const doc of dadosIniciais.documentos) {
-          await firestoreService.addDocumento(doc);
-        }
-        setDocumentos(dadosIniciais.documentos);
-      } else {
-        setDocumentos(documentosData);
-      }
+      setCustos(custosData);
+      setEtapas(etapasData);
+      setDocumentos(documentosData);
 
     } catch (error) {
       console.error('Erro ao carregar dados do Firebase:', error);
-
-      // Em caso de erro, usar dados iniciais
-      setNomeProjeto(dadosIniciais.nomeProjeto);
-      setOrcamentoTotal(dadosIniciais.orcamentoTotal);
-      setCustos(dadosIniciais.custos);
-      setDocumentos(dadosIniciais.documentos);
-      setEtapas(dadosIniciais.etapas);
-      alert('Erro ao carregar dados do Firebase. Usando dados padrão.');
+      setNomeProjeto(projetoPadrao.nomeProjeto);
+      setOrcamentoTotal(projetoPadrao.orcamentoTotal);
+      alert('Erro ao carregar dados do Firebase.');
     } finally {
       setLoading(false);
     }
@@ -235,19 +202,20 @@ const DashboardObra = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          documento: {
-            nome: file.name,
-            tipo: file.type,
-            tamanho: file.size,
-            dados: reader.result
-          }
-        }));
-      };
-      reader.readAsDataURL(file);
+      if (file.size > 5 * 1024 * 1024) {
+        alert('arquivo muito grande! Tamanho máximo: 5MB');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        documento: {
+          nome: file.name,
+          tipo: file.type,
+          tamanho: file.size,
+          arquivo: file // Salvar o arquivo File para upload posterior
+        }
+      }));
     }
   };
 
@@ -260,15 +228,31 @@ const DashboardObra = () => {
     try {
       setSaving(true);
 
+      let documentoData = formData.documento;
+
+      // Se houver um novo arquivo para upload (objeto File)
+      if (formData.documento && formData.documento.arquivo instanceof File) {
+        const file = formData.documento.arquivo;
+        const resultado = await storageService.uploadFile(file);
+
+        documentoData = {
+          nome: resultado.nome,
+          tipo: resultado.tipo,
+          tamanho: resultado.tamanho,
+          base64: resultado.base64,
+          comprimido: resultado.comprimido || false
+        };
+      }
+
       const custoData = {
         categoria: formData.categoria,
         descricao: formData.descricao,
         valor: parseFloat(formData.valor),
         data: formData.data,
         status: formData.status,
-        temDocumento: formData.temDocumento,
+        temDocumento: !!documentoData,
         tipoDocumento: formData.tipoDocumento || '',
-        documento: formData.documento
+        documento: documentoData
       };
 
       if (editingCusto) {
@@ -317,18 +301,41 @@ const DashboardObra = () => {
   };
 
   const resetarDados = async () => {
-    if (confirm('Tem certeza que deseja resetar todos os dados para o padrão inicial? ATENÇÃO: Todos os dados serão apagados do Firebase!')) {
+    if (confirm('Tem certeza que deseja APAGAR TODOS os dados? Esta ação não pode ser desfeita!')) {
       try {
         setSaving(true);
-        // Nota: Para resetar completamente, recarregar a página forçará a criação de novos dados iniciais
+
+        // Deletar todos os custos
+        for (const c of custos) {
+          await firestoreService.deleteCusto(c.id);
+        }
+        // Deletar todas as etapas
+        for (const e of etapas) {
+          await firestoreService.deleteEtapa(e.id);
+        }
+        // Deletar todos os documentos
+        for (const d of documentos) {
+          await firestoreService.deleteDocumento(d.id);
+        }
+
+        // Resetar projeto para padrão
         await firestoreService.updateProjeto('projeto-principal', {
-          nome: dadosIniciais.nomeProjeto,
-          orcamentoTotal: dadosIniciais.orcamentoTotal
+          nome: projetoPadrao.nomeProjeto,
+          orcamentoTotal: projetoPadrao.orcamentoTotal,
+          categorias: categoriasDefault,
+          descricoesPadrao: descricoesDefault
         });
 
-        // Recarregar a página para forçar nova carga
-        alert('Dados resetados! A página será recarregada.');
-        window.location.reload();
+        // Atualizar estado local
+        setCustos([]);
+        setEtapas([]);
+        setDocumentos([]);
+        setNomeProjeto(projetoPadrao.nomeProjeto);
+        setOrcamentoTotal(projetoPadrao.orcamentoTotal);
+        setCategorias(categoriasDefault);
+        setDescricoesPadrao(descricoesDefault);
+
+        alert('✅ Todos os dados foram apagados com sucesso!');
       } catch (error) {
         console.error('Erro ao resetar:', error);
         alert('Erro ao resetar. Tente novamente.');
@@ -388,22 +395,20 @@ const DashboardObra = () => {
         return;
       }
 
-      // Filtrar documentos relacionados aos custos de mão de obra
-      const docsRelacionados = documentos.filter(doc =>
-        custosMaoDeObra.some(custo =>
-          custo.temDocumento && custo.documento?.nome === doc.nome
-        )
+      // Coletar documentos anexados aos custos (base64)
+      const custosComDocumento = custosMaoDeObra.filter(
+        c => c.temDocumento && c.documento && (c.documento.base64 || c.documento.url)
       );
 
       // Gerar PDF profissional
       generateWorkerPaymentReport(
         custosMaoDeObra,
-        docsRelacionados,
+        custosComDocumento,
         { nome: nomeProjeto, orcamentoTotal }
       );
 
       // Feedback de sucesso
-      alert(`✅ Relatório PDF gerado com sucesso!\n\n📊 ${custosMaoDeObra.length} pagamento(s) de mão de obra\n📎 ${docsRelacionados.length} documento(s) anexado(s)`);
+      alert(`✅ Relatório PDF gerado com sucesso!\n\n📊 ${custosMaoDeObra.length} pagamento(s) de mão de obra\n📎 ${custosComDocumento.length} documento(s) anexado(s)`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('❌ Erro ao gerar relatório. Tente novamente.\n\nDetalhes: ' + error.message);
@@ -444,17 +449,59 @@ const DashboardObra = () => {
     try {
       setSaving(true);
       await firestoreService.updateProjeto('projeto-principal', {
-        nome: tempNomeProjeto
+        nome: tempNomeProjeto,
+        categorias,
+        descricoesPadrao
       });
 
       setNomeProjeto(tempNomeProjeto);
       setShowConfigModal(false);
     } catch (error) {
-      console.error('Erro ao salvar nome do projeto:', error);
+      console.error('Erro ao salvar configurações:', error);
       alert('Erro ao salvar. Tente novamente.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const adicionarCategoria = () => {
+    if (!novaCategoria.trim()) return;
+    const novasCategorias = categorias.map(g => {
+      if (g.grupo === grupoNovaCategoria) {
+        if (g.items.includes(novaCategoria.trim())) {
+          alert('Essa categoria já existe!');
+          return g;
+        }
+        return { ...g, items: [...g.items, novaCategoria.trim()] };
+      }
+      return g;
+    });
+    setCategorias(novasCategorias);
+    setNovaCategoria('');
+  };
+
+  const removerCategoria = (grupo, item) => {
+    const novasCategorias = categorias.map(g => {
+      if (g.grupo === grupo) {
+        return { ...g, items: g.items.filter(i => i !== item) };
+      }
+      return g;
+    });
+    setCategorias(novasCategorias);
+  };
+
+  const adicionarDescricao = () => {
+    if (!novaDescricao.trim()) return;
+    if (descricoesPadrao.includes(novaDescricao.trim())) {
+      alert('Essa descrição já existe!');
+      return;
+    }
+    setDescricoesPadrao([...descricoesPadrao, novaDescricao.trim()]);
+    setNovaDescricao('');
+  };
+
+  const removerDescricao = (desc) => {
+    setDescricoesPadrao(descricoesPadrao.filter(d => d !== desc));
   };
 
   // ========== FUNÇÕES DE IA ==========
@@ -626,19 +673,15 @@ const DashboardObra = () => {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormDocumento(prev => ({
-          ...prev,
-          arquivo: {
-            nome: file.name,
-            tipo: file.type,
-            tamanho: file.size,
-            dados: reader.result
-          }
-        }));
-      };
-      reader.readAsDataURL(file);
+      setFormDocumento(prev => ({
+        ...prev,
+        arquivo: {
+          nome: file.name,
+          tipo: file.type,
+          tamanho: file.size,
+          arquivo: file // Mantém o objeto File original
+        }
+      }));
     }
   };
 
@@ -651,12 +694,18 @@ const DashboardObra = () => {
     try {
       setSaving(true);
 
+      const file = formDocumento.arquivo.arquivo;
+      const resultado = await storageService.uploadFile(file);
+
       const novoDoc = {
         tipo: formDocumento.tipo,
-        nome: formDocumento.arquivo.nome,
+        nome: resultado.nome,
         data: new Date().toISOString().split('T')[0],
-        tamanho: (formDocumento.arquivo.tamanho / 1024).toFixed(0) + ' KB',
-        arquivo: formDocumento.arquivo
+        tamanho: resultado.tamanho > 1024 * 1024
+          ? (resultado.tamanho / (1024 * 1024)).toFixed(1) + ' MB'
+          : (resultado.tamanho / 1024).toFixed(0) + ' KB',
+        base64: resultado.base64,
+        comprimido: resultado.comprimido || false
       };
 
       const novoId = await firestoreService.addDocumento(novoDoc);
@@ -664,14 +713,18 @@ const DashboardObra = () => {
       setShowAddModal(false);
     } catch (error) {
       console.error('Erro ao salvar documento:', error);
-      alert('Erro ao salvar. Tente novamente.');
+      alert(error.message || 'Erro ao salvar. Tente novamente.');
     } finally {
       setSaving(false);
     }
   };
 
   const visualizarDocumento = (doc) => {
-    if (doc.arquivo && doc.arquivo.dados) {
+    if (doc.base64) {
+      window.open(doc.base64, '_blank');
+    } else if (doc.url) {
+      window.open(doc.url, '_blank');
+    } else if (doc.arquivo && doc.arquivo.dados) { // Compatibilidade legado
       window.open(doc.arquivo.dados, '_blank');
     } else {
       alert('Este documento não tem arquivo anexado.');
@@ -679,17 +732,23 @@ const DashboardObra = () => {
   };
 
   const visualizarDocumentoCusto = (custo) => {
-    if (custo.documento && custo.documento.dados) {
+    if (custo.documento && custo.documento.base64) {
+      window.open(custo.documento.base64, '_blank');
+    } else if (custo.documento && custo.documento.url) {
+      window.open(custo.documento.url, '_blank');
+    } else if (custo.documento && custo.documento.dados) { // Compatibilidade legado
       window.open(custo.documento.dados, '_blank');
     } else {
       alert('Este custo não tem documento anexado.');
     }
   };
 
-  const downloadDocumento = (doc) => {
-    if (doc.arquivo && doc.arquivo.dados) {
+  const downloadDocumento = async (doc) => {
+    const dataUrl = doc.base64 || doc.url || (doc.arquivo && doc.arquivo.dados);
+    if (dataUrl) {
       const link = document.createElement('a');
-      link.href = doc.arquivo.dados;
+      link.href = dataUrl;
+      link.target = '_blank';
       link.download = doc.nome;
       document.body.appendChild(link);
       link.click();
@@ -703,6 +762,17 @@ const DashboardObra = () => {
     if (confirm('Tem certeza que deseja remover este documento?')) {
       try {
         setSaving(true);
+
+        // Tentar deletar arquivo do storage se existir path
+        const docParaDeletar = documentos.find(d => d.id === id);
+        if (docParaDeletar && docParaDeletar.path) {
+          try {
+            await storageService.deleteFile(docParaDeletar.path);
+          } catch (storageError) {
+            console.warn('Arquivo não encontrado no storage ou erro ao deletar:', storageError);
+          }
+        }
+
         await firestoreService.deleteDocumento(id);
         const novosDocs = documentos.filter(d => d.id !== id);
         setDocumentos(novosDocs);
@@ -727,20 +797,23 @@ const DashboardObra = () => {
   }
 
   // Cálculos
-  const custosObra = custos.filter(c => ['Material', 'Mão de obra', 'Equipamento'].includes(c.categoria));
-  const custosManutencao = custos.filter(c => ['Energia', 'Condomínio', 'IPTU'].includes(c.categoria));
+  const todasCategorias = categorias.flatMap(g => g.items);
+  const categoriasObraItems = categorias.find(g => g.grupo === 'Custos de Obra')?.items || [];
+  const categoriasManutItems = categorias.find(g => g.grupo === 'Custos de Manutenção')?.items || [];
+  const custosObra = custos.filter(c => categoriasObraItems.includes(c.categoria));
+  const custosManutencao = custos.filter(c => categoriasManutItems.includes(c.categoria));
 
   const totalGasto = custos.filter(c => c.status === 'pago').reduce((sum, c) => sum + c.valor, 0);
   const totalPendente = custos.filter(c => c.status === 'pendente').reduce((sum, c) => sum + c.valor, 0);
   const totalAprovado = custos.filter(c => c.status === 'aprovado').reduce((sum, c) => sum + c.valor, 0);
   const saldoDisponivel = orcamentoTotal - totalGasto - totalAprovado;
-  const percentualGasto = ((totalGasto + totalAprovado) / orcamentoTotal * 100).toFixed(1);
+  const percentualGasto = orcamentoTotal > 0 ? ((totalGasto + totalAprovado) / orcamentoTotal * 100).toFixed(1) : '0.0';
 
   const totalObra = custosObra.reduce((sum, c) => sum + c.valor, 0);
   const totalManutencao = custosManutencao.reduce((sum, c) => sum + c.valor, 0);
   const documentosFaltando = custos.filter(c => !c.temDocumento).length;
 
-  const progressoGeral = (etapas.reduce((sum, e) => sum + e.progresso, 0) / etapas.length).toFixed(0);
+  const progressoGeral = etapas.length > 0 ? (etapas.reduce((sum, e) => sum + e.progresso, 0) / etapas.length).toFixed(0) : '0';
 
   const StatusBadge = ({ status }) => {
     const configs = {
@@ -941,24 +1014,27 @@ const DashboardObra = () => {
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4">Distribuição de Custos</h3>
                     <div className="space-y-3">
-                      {[
-                        { categoria: 'Material', valor: custos.filter(c => c.categoria === 'Material').reduce((s, c) => s + c.valor, 0), cor: 'bg-blue-500' },
-                        { categoria: 'Mão de obra', valor: custos.filter(c => c.categoria === 'Mão de obra').reduce((s, c) => s + c.valor, 0), cor: 'bg-green-500' },
-                        { categoria: 'Equipamento', valor: custos.filter(c => c.categoria === 'Equipamento').reduce((s, c) => s + c.valor, 0), cor: 'bg-yellow-500' }
-                      ].map(item => {
-                        const percentual = ((item.valor / (totalGasto + totalAprovado + totalPendente)) * 100).toFixed(1);
+                      {todasCategorias.map((cat, idx) => {
+                        const cores = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500'];
+                        const valor = custos.filter(c => c.categoria === cat).reduce((s, c) => s + c.valor, 0);
+                        const totalTodos = totalGasto + totalAprovado + totalPendente;
+                        const percentual = totalTodos > 0 ? ((valor / totalTodos) * 100).toFixed(1) : '0.0';
+                        if (valor === 0) return null;
                         return (
-                          <div key={item.categoria}>
+                          <div key={cat}>
                             <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-700">{item.categoria}</span>
-                              <span className="font-medium">{formatCurrency(item.valor)} ({percentual}%)</span>
+                              <span className="text-gray-700">{cat}</span>
+                              <span className="font-medium">{formatCurrency(valor)} ({percentual}%)</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className={`${item.cor} h-2 rounded-full`} style={{ width: `${percentual}%` }}></div>
+                              <div className={`${cores[idx % cores.length]} h-2 rounded-full`} style={{ width: `${percentual}%` }}></div>
                             </div>
                           </div>
                         );
                       })}
+                      {custos.length === 0 && (
+                        <p className="text-gray-400 text-sm">Nenhum custo registrado</p>
+                      )}
                     </div>
                   </div>
 
@@ -1052,10 +1128,14 @@ const DashboardObra = () => {
 
                 {/* Filtros */}
                 <div className="mb-4 flex gap-2 flex-wrap">
-                  {['Todos', 'Material', 'Mão de obra', 'Equipamento', 'Energia', 'Condomínio', 'IPTU'].map(cat => (
+                  {['Todos', ...todasCategorias].map(cat => (
                     <button
                       key={cat}
-                      className="px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                      onClick={() => setFiltroCategoria(cat)}
+                      className={`px-3 py-1 rounded-full text-sm border transition ${filtroCategoria === cat
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 hover:bg-gray-100 text-gray-700'
+                        }`}
                     >
                       {cat}
                     </button>
@@ -1076,75 +1156,77 @@ const DashboardObra = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {custos.map(custo => (
-                        <tr key={custo.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">{formatDate(custo.data)}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${['Material', 'Mão de obra', 'Equipamento'].includes(custo.categoria)
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                              }`}>
-                              {custo.categoria}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{custo.descricao}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{formatCurrency(custo.valor)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <select
-                              value={custo.status}
-                              onChange={(e) => atualizarStatusCusto(custo.id, e.target.value)}
-                              className={`text-xs px-3 py-1.5 rounded-full border-0 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer transition-colors ${custo.status === 'pago'
-                                ? 'bg-green-100 text-green-800'
-                                : custo.status === 'aprovado'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                                }`}
-                            >
-                              <option value="pendente">Pendente</option>
-                              <option value="aprovado">Aprovado</option>
-                              <option value="pago">Pago</option>
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {custo.temDocumento ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <CheckCircle size={16} className="text-green-600" />
-                                <span className="text-xs text-gray-600">{custo.tipoDocumento}</span>
-                                {custo.documento && custo.documento.dados && (
-                                  <button
-                                    onClick={() => visualizarDocumentoCusto(custo)}
-                                    className="text-blue-600 hover:text-blue-800 underline text-xs"
-                                    title="Visualizar documento"
-                                  >
-                                    Ver
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1">
-                                <AlertCircle size={16} className="text-yellow-600" />
-                                <span className="text-xs text-gray-600">Pendente</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() => abrirModalEditar(custo)}
-                              className="text-gray-600 hover:text-blue-600 mr-2"
-                              title="Editar"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              onClick={() => removerCusto(custo.id)}
-                              className="text-gray-600 hover:text-red-600"
-                              title="Excluir"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {custos
+                        .filter(c => filtroCategoria === 'Todos' || c.categoria === filtroCategoria)
+                        .map(custo => (
+                          <tr key={custo.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">{formatDate(custo.data)}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${categoriasObraItems.includes(custo.categoria)
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                {custo.categoria}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{custo.descricao}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">{formatCurrency(custo.valor)}</td>
+                            <td className="px-4 py-3 text-center">
+                              <select
+                                value={custo.status}
+                                onChange={(e) => atualizarStatusCusto(custo.id, e.target.value)}
+                                className={`text-xs px-3 py-1.5 rounded-full border-0 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer transition-colors ${custo.status === 'pago'
+                                  ? 'bg-green-100 text-green-800'
+                                  : custo.status === 'aprovado'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                  }`}
+                              >
+                                <option value="pendente">Pendente</option>
+                                <option value="aprovado">Aprovado</option>
+                                <option value="pago">Pago</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {custo.temDocumento ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <CheckCircle size={16} className="text-green-600" />
+                                  <span className="text-xs text-gray-600">{custo.tipoDocumento}</span>
+                                  {custo.documento && custo.documento.dados && (
+                                    <button
+                                      onClick={() => visualizarDocumentoCusto(custo)}
+                                      className="text-blue-600 hover:text-blue-800 underline text-xs"
+                                      title="Visualizar documento"
+                                    >
+                                      Ver
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <AlertCircle size={16} className="text-yellow-600" />
+                                  <span className="text-xs text-gray-600">Pendente</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => abrirModalEditar(custo)}
+                                className="text-gray-600 hover:text-blue-600 mr-2"
+                                title="Editar"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => removerCusto(custo.id)}
+                                className="text-gray-600 hover:text-red-600"
+                                title="Excluir"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                     <tfoot className="bg-gray-50 border-t-2 border-gray-300">
                       <tr>
@@ -1160,49 +1242,23 @@ const DashboardObra = () => {
 
                 {/* Resumo por categoria */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Custos de Obra</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Material:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'Material').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Mão de obra:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'Mão de obra').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Equipamento:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'Equipamento').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-gray-200">
-                        <span className="font-semibold text-gray-900">Subtotal:</span>
-                        <span className="font-bold">{formatCurrency(totalObra)}</span>
+                  {categorias.map(grupo => (
+                    <div key={grupo.grupo} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">{grupo.grupo}</h4>
+                      <div className="space-y-2 text-sm">
+                        {grupo.items.map(cat => (
+                          <div key={cat} className="flex justify-between">
+                            <span className="text-gray-600">{cat}:</span>
+                            <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === cat).reduce((s, c) => s + c.valor, 0))}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between pt-2 border-t border-gray-200">
+                          <span className="font-semibold text-gray-900">Subtotal:</span>
+                          <span className="font-bold">{formatCurrency(custos.filter(c => grupo.items.includes(c.categoria)).reduce((s, c) => s + c.valor, 0))}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Custos de Manutenção</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Energia:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'Energia').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Condomínio:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'Condomínio').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">IPTU:</span>
-                        <span className="font-medium">{formatCurrency(custos.filter(c => c.categoria === 'IPTU').reduce((s, c) => s + c.valor, 0))}</span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-gray-200">
-                        <span className="font-semibold text-gray-900">Subtotal:</span>
-                        <span className="font-bold">{formatCurrency(totalManutencao)}</span>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1466,7 +1522,9 @@ const DashboardObra = () => {
                           📎 {formDocumento.arquivo.nome}
                         </p>
                         <p className="text-xs text-green-600">
-                          {(formDocumento.arquivo.tamanho / 1024).toFixed(0)} KB
+                          {formDocumento.arquivo.tamanho
+                            ? (formDocumento.arquivo.tamanho / 1024).toFixed(0) + ' KB'
+                            : 'Tamanho desconhecido'}
                         </p>
                       </div>
                       <button
@@ -1522,16 +1580,13 @@ const DashboardObra = () => {
                     onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <optgroup label="Custos de Obra">
-                      <option value="Material">Material</option>
-                      <option value="Mão de obra">Mão de obra</option>
-                      <option value="Equipamento">Equipamento</option>
-                    </optgroup>
-                    <optgroup label="Custos de Manutenção">
-                      <option value="Energia">Energia</option>
-                      <option value="Condomínio">Condomínio</option>
-                      <option value="IPTU">IPTU</option>
-                    </optgroup>
+                    {categorias.map(grupo => (
+                      <optgroup key={grupo.grupo} label={grupo.grupo}>
+                        {grupo.items.map(item => (
+                          <option key={item} value={item}>{item}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
 
@@ -1542,11 +1597,17 @@ const DashboardObra = () => {
                   </label>
                   <input
                     type="text"
+                    list="descricoes-padrao"
                     value={formData.descricao}
                     onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                    placeholder="Ex: Cimento CP-II 50kg"
+                    placeholder="Digite ou selecione uma descrição"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  <datalist id="descricoes-padrao">
+                    {descricoesPadrao.map(d => (
+                      <option key={d} value={d} />
+                    ))}
+                  </datalist>
                 </div>
 
                 {/* Valor e Data */}
@@ -1679,36 +1740,12 @@ const DashboardObra = () => {
           </div>
         )}
 
-        {/* Modal Simples para outras funcionalidades */}
-        {showAddModal && modalType !== 'custo' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {modalType === 'etapa' && 'Adicionar Etapa'}
-                  {modalType === 'documento' && 'Upload Documento'}
-                </h3>
-                <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                  <X size={24} />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-4">
-                Funcionalidade em desenvolvimento. Este é um exemplo de interface.
-              </p>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {/* Modal de Configurações do Projeto */}
         {showConfigModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">Configurações do Projeto</h3>
                 <button
@@ -1719,7 +1756,8 @@ const DashboardObra = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Nome do Projeto */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome do Projeto
@@ -1731,6 +1769,90 @@ const DashboardObra = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Nome do projeto"
                   />
+                </div>
+
+                {/* Gerenciar Categorias */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Categorias de Custos</h4>
+                  {categorias.map(grupo => (
+                    <div key={grupo.grupo} className="mb-3">
+                      <p className="text-xs font-medium text-gray-500 uppercase mb-1">{grupo.grupo}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {grupo.items.map(item => (
+                          <span key={item} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-800 rounded-full text-xs">
+                            {item}
+                            <button
+                              onClick={() => removerCategoria(grupo.grupo, item)}
+                              className="text-blue-400 hover:text-red-500 transition"
+                              title="Remover"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 mt-2">
+                    <select
+                      value={grupoNovaCategoria}
+                      onChange={(e) => setGrupoNovaCategoria(e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                    >
+                      {categorias.map(g => (
+                        <option key={g.grupo} value={g.grupo}>{g.grupo}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={novaCategoria}
+                      onChange={(e) => setNovaCategoria(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarCategoria()}
+                      placeholder="Nova categoria"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={adicionarCategoria}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gerenciar Descrições Padrão */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Descrições Padrão (autocomplete)</h4>
+                  <div className="flex flex-wrap gap-1 mb-2 max-h-32 overflow-y-auto">
+                    {descricoesPadrao.map(d => (
+                      <span key={d} className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-800 rounded-full text-xs">
+                        {d}
+                        <button
+                          onClick={() => removerDescricao(d)}
+                          className="text-green-400 hover:text-red-500 transition"
+                          title="Remover"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={novaDescricao}
+                      onChange={(e) => setNovaDescricao(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && adicionarDescricao()}
+                      placeholder="Nova descrição padrão"
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={adicionarDescricao}
+                      className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">

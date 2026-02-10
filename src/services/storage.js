@@ -1,93 +1,31 @@
-// Serviço Firebase Storage para upload e gerenciamento de arquivos
-import {
-    ref,
-    uploadBytes,
-    uploadString,
-    getDownloadURL,
-    deleteObject,
-    listAll
-} from 'firebase/storage';
-import { storage } from './firebase';
+// Serviço de armazenamento de arquivos via Base64 no Firestore
+// Substitui o Firebase Storage (que requer plano Blaze)
+import { processFileForStorage } from './fileCompressor';
 
 /**
- * Faz upload de um arquivo para o Firebase Storage
- * @param {File|Blob} file - Arquivo a ser enviado
- * @param {string} path - Caminho no storage (ex: 'documentos/projeto1/arquivo.pdf')
- * @returns {Promise<string>} URL de download do arquivo
+ * Processa e prepara um arquivo para armazenamento no Firestore como Base64
+ * @param {File} file - Arquivo a ser processado
+ * @returns {Promise<{base64: string, nome: string, tipo: string, tamanho: number}>}
  */
-export const uploadFile = async (file, path) => {
+export const uploadFile = async (file) => {
     try {
-        const storageRef = ref(storage, path);
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        return downloadURL;
+        const result = await processFileForStorage(file, 700);
+        return result;
     } catch (error) {
-        console.error('Erro ao fazer upload:', error);
+        console.error('Erro ao processar arquivo:', error);
         throw error;
     }
 };
 
 /**
- * Faz upload de um arquivo a partir de uma string base64 (para arquivos salvos no storage antigo)
- * @param {string} base64String - String base64 do arquivo
- * @param {string} path - Caminho no storage
- * @returns {Promise<string>} URL de download do arquivo
- */
-export const uploadBase64 = async (base64String, path) => {
-    try {
-        const storageRef = ref(storage, path);
-        const snapshot = await uploadString(storageRef, base64String, 'data_url');
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        return downloadURL;
-    } catch (error) {
-        console.error('Erro ao fazer upload base64:', error);
-        throw error;
-    }
-};
-
-/**
- * Obtém a URL de download de um arquivo
- * @param {string} path - Caminho do arquivo no storage
- * @returns {Promise<string>} URL de download
- */
-export const getFileURL = async (path) => {
-    try {
-        const storageRef = ref(storage, path);
-        return await getDownloadURL(storageRef);
-    } catch (error) {
-        console.error('Erro ao obter URL:', error);
-        throw error;
-    }
-};
-
-/**
- * Remove um arquivo do storage
- * @param {string} path - Caminho do arquivo a ser removido
+ * "Deleta" um arquivo - no modo Base64/Firestore, não há arquivo externo para deletar
+ * O arquivo é removido quando o documento Firestore é deletado
+ * @param {string} path - Caminho (ignorado, mantido para compatibilidade)
  */
 export const deleteFile = async (path) => {
-    try {
-        const storageRef = ref(storage, path);
-        await deleteObject(storageRef);
-    } catch (error) {
-        console.error('Erro ao deletar arquivo:', error);
-        throw error;
-    }
-};
-
-/**
- * Lista todos os arquivos em uma pasta
- * @param {string} path - Caminho da pasta
- * @returns {Promise<Array>} Lista de referências de arquivos
- */
-export const listFiles = async (path) => {
-    try {
-        const storageRef = ref(storage, path);
-        const result = await listAll(storageRef);
-        return result.items;
-    } catch (error) {
-        console.error('Erro ao listar arquivos:', error);
-        throw error;
-    }
+    // No modo Base64, o arquivo está embutido no documento Firestore
+    // Não há nada para deletar separadamente
+    console.log('deleteFile: arquivo embutido no Firestore, nada para deletar externamente.');
 };
 
 /**
@@ -102,3 +40,12 @@ export const generateUniqueFileName = (originalName) => {
     const nameWithoutExt = originalName.replace(`.${extension}`, '');
     return `${nameWithoutExt}_${timestamp}_${randomStr}.${extension}`;
 };
+
+// Exportar como objeto para manter compatibilidade com imports existentes
+const storageService = {
+    uploadFile,
+    deleteFile,
+    generateUniqueFileName
+};
+
+export default storageService;

@@ -31,8 +31,8 @@ export const getProjeto = async (projetoId = DEFAULT_PROJECT_ID) => {
         } else {
             // Criar projeto padrão se não existir
             const novoProjeto = {
-                nome: 'Reforma Residencial - Apt 102',
-                orcamentoTotal: 50000,
+                nome: 'Novo Projeto',
+                orcamentoTotal: 0,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
@@ -67,7 +67,7 @@ export const getCustos = async (projetoId = DEFAULT_PROJECT_ID) => {
             where('projetoId', '==', projetoId)
         );
         const querySnapshot = await getDocs(q);
-        const custos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const custos = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         // Ordenar localmente ao invés de no Firestore (evita necessidade de índice)
         return custos.sort((a, b) => new Date(b.data) - new Date(a.data));
     } catch (error) {
@@ -121,7 +121,7 @@ export const getEtapas = async (projetoId = DEFAULT_PROJECT_ID) => {
             where('projetoId', '==', projetoId)
         );
         const querySnapshot = await getDocs(q);
-        const etapas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const etapas = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         // Ordenar localmente ao invés de no Firestore (evita necessidade de índice)
         return etapas.sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
     } catch (error) {
@@ -175,7 +175,7 @@ export const getDocumentos = async (projetoId = DEFAULT_PROJECT_ID) => {
             where('projetoId', '==', projetoId)
         );
         const querySnapshot = await getDocs(q);
-        const documentos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const documentos = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         // Ordenar localmente ao invés de no Firestore (evita necessidade de índice)
         return documentos.sort((a, b) => new Date(b.data) - new Date(a.data));
     } catch (error) {
@@ -215,7 +215,7 @@ export const onCustosChange = (callback, projetoId = DEFAULT_PROJECT_ID) => {
         where('projetoId', '==', projetoId)
     );
     return onSnapshot(q, (snapshot) => {
-        const custos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const custos = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         callback(custos);
     });
 };
@@ -226,7 +226,7 @@ export const onEtapasChange = (callback, projetoId = DEFAULT_PROJECT_ID) => {
         where('projetoId', '==', projetoId)
     );
     return onSnapshot(q, (snapshot) => {
-        const etapas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const etapas = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         callback(etapas);
     });
 };
@@ -237,7 +237,7 @@ export const onDocumentosChange = (callback, projetoId = DEFAULT_PROJECT_ID) => 
         where('projetoId', '==', projetoId)
     );
     return onSnapshot(q, (snapshot) => {
-        const documentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const documentos = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         callback(documentos);
     });
 };
